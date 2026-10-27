@@ -1,4 +1,4 @@
-import { HumanMessage } from "@langchain/core/messages";
+import { HumanMessage, BaseMessage } from "@langchain/core/messages";
 import { createAgent, toolStrategy } from "langchain";
 import { StateSchema, MessagesValue, ReducedValue, StateGraph, START, END, } from "@langchain/langgraph";
 import type { GraphNode } from "@langchain/langgraph";
@@ -34,11 +34,19 @@ const State = new StateSchema({
     )
 })
 
-const solutionNode: GraphNode<typeof State> = async (state: typeof State) => {
+const getQuestion = (messages: BaseMessage[]) => {
+    const question = messages[0]?.text;
+    if (!question) throw new Error("No user message in state");
+    return question;
+};
+
+const solutionNode: GraphNode<typeof State> = async (state) => {
+
+    const question = getQuestion(state.messages)
 
     const [gemini_solution, cohere_solution] = await Promise.all([
-        geminiModel.invoke(state.messages[0].text),
-        cohereModel.invoke(state.messages[0].text)
+        geminiModel.invoke(question),
+        cohereModel.invoke(question)
     ])
 
     return {
@@ -47,9 +55,9 @@ const solutionNode: GraphNode<typeof State> = async (state: typeof State) => {
     }
 }
 
-const judgeNode: GraphNode<typeof State> = async (state: typeof State) => {
+const judgeNode: GraphNode<typeof State> = async (state) => {
 
-    console.log("Invoking judge with state", state)
+    const question = getQuestion(state.messages)
 
     const { solution_1, solution_2 } = state;
 
@@ -64,27 +72,22 @@ const judgeNode: GraphNode<typeof State> = async (state: typeof State) => {
         messages: [
             new HumanMessage(
                 `You are a strict, impartial evaluator of two AI-generated solutions.
+                Problem: ${question}
+                Solution 1: ${solution_1}
+                Solution 2: ${solution_2}
 
-Problem: ${state.messages[0].text}
+                Evaluate both solutions independently using these criteria:
+                1. Correctness and factual accuracy (40%)
+                2. Handling of edge cases (25%)
+                3. Completeness and adherence to the request (20%)
+                4. Clarity and maintainability (15%)
 
-Solution 1:
-${solution_1}
-
-Solution 2:
-${solution_2}
-
-Evaluate both solutions independently using these criteria:
-1. Correctness and factual accuracy (40%)
-2. Handling of edge cases (25%)
-3. Completeness and adherence to the request (20%)
-4. Clarity and maintainability (15%)
-
-Rules:
-- Prioritize correctness over length or formatting.
-- Penalize bugs, incorrect technical claims, and missing edge cases.
-- Do not reward extra content if it contains mistakes.
-- A simple, correct solution can score higher than a long, flawed one.
-- Give each solution an independent score from 0 to 10.`
+                Rules:
+                - Prioritize correctness over length or formatting.
+                - Penalize bugs, incorrect technical claims, and missing edge cases.
+                - Do not reward extra content if it contains mistakes.
+                - A simple, correct solution can score higher than a long, flawed one.
+                - Give each solution an independent score from 0 to 10.`
             )
         ]
     })
@@ -111,5 +114,9 @@ export default async function (userMessage: string) {
 
     console.log(result)
 
-    return result.messages
+    return {
+        solution_1: result.solution_1,
+        solution_2: result.solution_2,
+        judge_recommendation: result.judge_recommendation,
+    };
 }
