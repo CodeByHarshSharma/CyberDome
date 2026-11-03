@@ -1,91 +1,72 @@
 import { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import UserMessage from '../User/UserMessage';
 import ArenaResponse from '../Response/ArenaResponse';
 import './ChatInterface.css';
 
-const MOCK_RESPONSE = {
-    solution_1: `Here is a clean Python solution using modern syntax:
 
-\`\`\`python
-def fib(n):
-    a, b = 0, 1
-    for _ in range(n):
-        a, b = b, a + b
-    return a
-\`\`\`
 
-This approach has O(n) time complexity and O(1) space.`,
-
-    solution_2: `A recursive solution can be elegant but less efficient:
-
-\`\`\`python
-def fib(n):
-    if n <= 1:
-        return n
-    return fib(n-1) + fib(n-2)
-\`\`\`
-
-Note: this has O(2^n) time complexity.`,
-
-    judge: {
-        solution_1_score: 10,
-        solution_2_score: 5,
-        solution_1_reasoning:
-            'Excellent, optimal solution. Space complexity is O(1) which is perfect for this problem.',
-        solution_2_reasoning:
-            'The recursive approach without memoization is extremely slow for large inputs.',
-    },
-};
+const api = axios.create({
+    baseURL: "http://localhost:3000",
+    withCredentials: true,
+    timeout: 180000
+})
 
 export default function ChatInterface() {
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
+    const [isLoading, setIsLoading] = useState(false)
 
     const endOfMessagesRef = useRef(null);
 
-    const scrollToBottom = () => {
-        endOfMessagesRef.current?.scrollIntoView({
-            behavior: 'smooth',
-        });
-    };
-
     useEffect(() => {
-        scrollToBottom();
+        endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleSend = (e) => {
+    const updateMessage = (id, patch) => {
+        setMessages((prev) =>
+            prev.map((m) => (m.id === id ? { ...m, ...patch } : m))
+        );
+    };
+
+    const handleSend = async (e) => {
         e.preventDefault();
 
-        if (!inputValue.trim()) return;
+        const problem = inputValue.trim();
+        if (!problem || isLoading) return;
 
-        const newMessage = {
-            id: Date.now(),
-            problem: inputValue.trim(),
-            ...MOCK_RESPONSE,
-        };
+        const id = Date.now();
 
-        setMessages((previousMessages) => [
-            ...previousMessages,
-            newMessage,
-        ]);
-
+        setMessages((prev) => [...prev, { id, problem, status: 'loading' }]);
         setInputValue('');
+        setIsLoading(true);
+
+        try {
+            const { data } = await api.post('/invoke', { input: problem });
+            updateMessage(id, { ...data.result, status: 'done' });
+        } catch (err) {
+            const error =
+                err.response?.data?.message ||
+                (err.code === 'ECONNABORTED'
+                    ? 'The request timed out. Please try again.'
+                    : 'Something went wrong. Please try again.');
+            updateMessage(id, { status: 'error', error });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
         <div className="chat-interface">
             <header className="chat-header">
-                <h1 className="chat-title">AI Chat Arena</h1>
+                <h1 className="chat-title">AI CyberDome</h1>
             </header>
 
             <main className="chat-main">
                 {messages.length === 0 ? (
                     <div className="welcome-screen">
                         <div className="welcome-content">
-                            <h2 className="welcome-title">
-                                Welcome to the Arena
-                            </h2>
-
+                            <h2 className="welcome-title">Welcome to the Arena</h2>
                             <p className="welcome-description">
                                 Type a problem below to see two AI solutions
                                 go head-to-head.
@@ -98,9 +79,11 @@ export default function ChatInterface() {
                             <UserMessage message={msg.problem} />
 
                             <ArenaResponse
+                                status={msg.status}
+                                error={msg.error}
                                 solution1={msg.solution_1}
                                 solution2={msg.solution_2}
-                                judge={msg.judge}
+                                judge={msg.judge_recommendation}
                             />
                         </div>
                     ))
@@ -111,22 +94,25 @@ export default function ChatInterface() {
 
             <footer className="chat-footer">
                 <div className="chat-input-container">
-                    <form
-                        onSubmit={handleSend}
-                        className="chat-form"
-                    >
+                    <form onSubmit={handleSend} className="chat-form">
                         <input
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            placeholder="Ask a coding question..."
+                            placeholder={
+                                isLoading
+                                    ? 'Waiting for the arena...'
+                                    : 'Ask a coding question...'
+                            }
                             className="chat-input"
+                            disabled={isLoading}
+                            maxLength={4000}
                         />
 
                         <button
                             type="submit"
                             className="chat-send-button"
-                            disabled={!inputValue.trim()}
+                            disabled={!inputValue.trim() || isLoading}
                             aria-label="Send message"
                         >
                             <svg
