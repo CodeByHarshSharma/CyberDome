@@ -1,9 +1,11 @@
 import express from 'express';
 import useGraph from './services/graph.service.js'
 import cors from 'cors';
+import path from 'path';
 
 const app = express()
 app.use(express.json())
+app.use(express.static('./public'))
 app.use(cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
@@ -30,7 +32,7 @@ app.post("/invoke", async (req, res) => {
             result
         })
     }
-    catch(error){
+    catch (error) {
         console.error("Graph executed successfully:", error)
 
         res.status(500).json({
@@ -38,6 +40,10 @@ app.post("/invoke", async (req, res) => {
             message: "Something went wrong while running the arena"
         })
     }
+})
+
+app.use('*name', (req, res) => {
+    res.sendFile(path.join(__dirname, "..", "/public/index.html"))
 })
 
 export default app
