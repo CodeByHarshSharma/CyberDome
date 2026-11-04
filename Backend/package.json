@@ -13,7 +13,6 @@
   "type": "module",
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
   "dependencies": {
@@ -30,6 +29,7 @@
     "express": "^5.2.1",
     "langchain": "^1.5.16",
     "path": "^0.12.7",
+    "tsx": "^4.23.15",
     "zod": "^4.6.6"
   }
 }
