@@ -9,7 +9,7 @@ export const geminiModel = new ChatGoogleGenerativeAI({
 })
 
 export const ollamaModel = new ChatOllama({
-    model: "gemma4:31b-cloud",
+    model: "mimo-v2.6",
     baseUrl: "https://ollama.com",
     headers: {
         Authorization: `Bearer ${config.OLLAMA_API_KEY}`
