@@ -7,7 +7,7 @@ import './ChatInterface.css';
 
 
 const api = axios.create({
-    baseURL: "",
+    baseURL: import.meta.env.DEV ? "http://localhost:3000" : "",
     withCredentials: true,
     timeout: 180000
 })
