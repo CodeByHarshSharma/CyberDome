@@ -1,6 +1,7 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOllama } from "@langchain/ollama";
 import { ChatCohere } from "@langchain/cohere";
+import { ChatGroq } from "@langchain/groq";
 import config from '../config/config.js'
 
 export const geminiModel = new ChatGoogleGenerativeAI({
@@ -9,11 +10,16 @@ export const geminiModel = new ChatGoogleGenerativeAI({
 })
 
 export const ollamaModel = new ChatOllama({
-    model: "glm-5.3-flash:cloud",
+    model: "gemma4:31b-cloud",
     baseUrl: "https://ollama.com",
     headers: {
         Authorization: `Bearer ${config.OLLAMA_API_KEY}`
     }
+})
+
+export const groqModel = new ChatGroq({
+    model: "openai/gpt-oss-120b",
+    apiKey: config.GROQ_API_KEY
 })
 
 export const cohereModel = new ChatCohere({

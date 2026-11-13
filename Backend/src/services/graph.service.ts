@@ -1,8 +1,8 @@
 import { HumanMessage } from "@langchain/core/messages";
-import { createAgent, toolStrategy } from "langchain";
+import { createAgent, toolStrategy, providerStrategy } from "langchain";
 import { StateSchema, StateGraph, START, END } from "@langchain/langgraph";
 import type { GraphNode } from "@langchain/langgraph";
-import { geminiModel, cohereModel, ollamaModel } from "./models.service.js";
+import { geminiModel, cohereModel, ollamaModel, groqModel } from "./models.service.js";
 import { z } from "zod";
 
 const JudgeSchema = z.object({
@@ -68,9 +68,9 @@ const judgeNode: GraphNode<typeof State> = async (state) => {
         : [solution_1, solution_2];
 
     const judge = createAgent({
-        model: ollamaModel,
+        model: groqModel,
         tools: [],
-        responseFormat: toolStrategy(JudgeSchema),
+        responseFormat: providerStrategy(JudgeSchema),
         systemPrompt: `You are a strict, impartial evaluator of two AI-generated solutions.
 
                 Evaluate both solutions independently using these criteria:

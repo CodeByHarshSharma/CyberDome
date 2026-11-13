@@ -19,6 +19,9 @@ app.get('/health', (req, res) => {
     })
 })
 
+app.use('*name', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'public', 'index.html'))
+})
 
 app.post("/invoke", async (req, res) => {
     const { input } = req.body
