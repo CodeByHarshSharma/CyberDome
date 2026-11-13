@@ -44,6 +44,10 @@ app.post("/invoke", async (req, res) => {
     }
 })
 
+app.get('/', (req, res) => {
+    res.redirect('/index.html')
+})
+
 app.use((req, res) => {
     res.status(404).json({
         success: false,
